@@ -29,9 +29,14 @@ export default function AdvisorDashboard() {
   const { user } = useUser();
   const db = useFirestore();
   const { t } = useLanguage();
-  const { toast } = useToast();
+  const ADMIN_WHITELIST = [
+    "maximus8874@gmail.com",
+    "administracionmaritima@ensub.edu.co",
+    "josediazdoria08@gmail.com",
+    "felipetorrez502@gmail.com"
+  ];
 
-  const isSuperUser = user?.email === "felipetorrez502@gmail.com";
+  const isSuperUser = ADMIN_WHITELIST.includes(user?.email?.toLowerCase() || "");
 
   // Consulta optimizada: 
   // - Si es Superusuario, ve TODOS los proyectos.

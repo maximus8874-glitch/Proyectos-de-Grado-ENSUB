@@ -429,7 +429,14 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ id: s
   if (isProjectLoading) return <div className="flex items-center justify-center h-screen"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   if (!project) return <div className="p-8 text-center">Proyecto no encontrado.</div>;
 
-  const isSuperUser = user?.email === "felipetorrez502@gmail.com";
+  const ADMIN_WHITELIST = [
+    "maximus8874@gmail.com",
+    "administracionmaritima@ensub.edu.co",
+    "josediazdoria08@gmail.com",
+    "felipetorrez502@gmail.com"
+  ];
+
+  const isSuperUser = ADMIN_WHITELIST.includes(user?.email?.toLowerCase() || "");
   const isAdvisor = project.advisorIds?.includes(user?.uid || "") || isSuperUser;
   const isStudent = project.studentId === user?.uid;
   const canViewThesis = ['En Curso', 'Defendido', 'Completado', 'Rechazado'].includes(project.status);
