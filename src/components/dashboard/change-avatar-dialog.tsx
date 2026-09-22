@@ -19,45 +19,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { 
   Camera, 
   Upload, 
-  Sparkles, 
   Check, 
   Loader2, 
   Image as ImageIcon, 
-  User, 
-  ShieldCheck, 
-  Anchor,
-  GraduationCap
+  Link as LinkIcon
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { recordAuditLog } from "@/lib/audit";
-
-// Avatares institucionales predeterminados de la ENSUB
-const PRESET_AVATARS = [
-  {
-    id: "naval-officer",
-    name: "Oficial Naval",
-    url: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&auto=format&fit=crop&q=80",
-    icon: Anchor,
-  },
-  {
-    id: "naval-cadet",
-    name: "Grumete / Alumno",
-    url: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80",
-    icon: GraduationCap,
-  },
-  {
-    id: "researcher",
-    name: "Investigador",
-    url: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300&auto=format&fit=crop&q=80",
-    icon: User,
-  },
-  {
-    id: "command",
-    name: "Comando / Jefatura",
-    url: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=300&auto=format&fit=crop&q=80",
-    icon: ShieldCheck,
-  },
-];
 
 interface ChangeAvatarDialogProps {
   open: boolean;
@@ -178,7 +146,7 @@ export function ChangeAvatarDialog({
         actionType: "AUTH_LOGIN",
         entityType: "User",
         entityId: user.uid,
-        details: "El usuario actualizó exitosamente su foto de perfil institucional.",
+        details: "El usuario actualizó exitosamente su foto de perfil.",
       });
 
       if (onAvatarUpdated) {
@@ -187,7 +155,7 @@ export function ChangeAvatarDialog({
 
       toast({
         title: "Foto de Perfil Actualizada",
-        description: "Tu nueva imagen institucional se ha guardado correctamente.",
+        description: "Tu nueva imagen se ha guardado correctamente.",
       });
 
       onOpenChange(false);
@@ -216,17 +184,17 @@ export function ChangeAvatarDialog({
             </DialogTitle>
           </div>
           <DialogDescription className="text-xs font-medium text-muted-foreground">
-            Personaliza tu imagen institucional visible en propuestas, actas y tablero de control.
+            Sube tu fotografía personal para personalizar tu perfil institucional en la plataforma.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6 py-2">
           {/* Vista previa central */}
-          <div className="flex flex-col items-center justify-center gap-3 p-4 rounded-2xl bg-slate-50 border border-slate-100">
+          <div className="flex flex-col items-center justify-center gap-3 p-5 rounded-2xl bg-slate-50 border border-slate-100">
             <div className="relative group">
-              <Avatar className="h-28 w-28 border-4 border-white shadow-xl ring-4 ring-primary/20">
+              <Avatar className="h-32 w-32 border-4 border-white shadow-xl ring-4 ring-primary/20">
                 <AvatarImage src={selectedUrl || currentPhotoUrl} className="object-cover" />
-                <AvatarFallback className="bg-primary text-white text-2xl font-black">
+                <AvatarFallback className="bg-primary text-white text-3xl font-black">
                   {userName.slice(0, 2).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
@@ -234,7 +202,7 @@ export function ChangeAvatarDialog({
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="absolute bottom-0 right-0 p-2.5 bg-primary hover:bg-primary/90 text-white rounded-full shadow-lg border-2 border-white transition-transform hover:scale-110 cursor-pointer"
+                className="absolute bottom-1 right-1 p-2.5 bg-primary hover:bg-primary/90 text-white rounded-full shadow-lg border-2 border-white transition-transform hover:scale-110 cursor-pointer"
                 title="Subir archivo desde el equipo"
               >
                 <Upload className="h-4 w-4" />
@@ -244,7 +212,7 @@ export function ChangeAvatarDialog({
             <div className="text-center">
               <p className="text-xs font-black uppercase text-slate-800 tracking-tight">{userName}</p>
               <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">
-                Vista previa institucional
+                {selectedUrl ? "Nueva foto seleccionada" : "Foto actual"}
               </p>
             </div>
           </div>
@@ -263,55 +231,16 @@ export function ChangeAvatarDialog({
             type="button"
             variant="outline"
             onClick={() => fileInputRef.current?.click()}
-            className="w-full rounded-2xl border-dashed border-2 py-6 gap-2 text-xs font-bold hover:bg-primary/5 hover:border-primary/40 text-slate-700"
+            className="w-full rounded-2xl border-dashed border-2 py-6 gap-2 text-xs font-bold hover:bg-primary/5 hover:border-primary/40 text-slate-700 shadow-sm"
           >
             <Upload className="h-4 w-4 text-primary" />
-            Subir foto desde mi computador (JPG, PNG)
+            Seleccionar foto desde mi computador (JPG, PNG)
           </Button>
-
-          {/* Selector de Avatares Institucionales Predeterminados */}
-          <div className="space-y-2.5">
-            <Label className="text-[10px] font-black uppercase text-slate-500 tracking-widest flex items-center gap-1.5">
-              <Sparkles className="h-3.5 w-3.5 text-[#FF6B00]" />
-              O elige un avatar institucional
-            </Label>
-            
-            <div className="grid grid-cols-4 gap-2.5">
-              {PRESET_AVATARS.map((preset) => {
-                const isSelected = selectedUrl === preset.url;
-                return (
-                  <button
-                    key={preset.id}
-                    type="button"
-                    onClick={() => setSelectedUrl(preset.url)}
-                    className={`relative flex flex-col items-center gap-1.5 p-2 rounded-2xl border-2 transition-all cursor-pointer ${
-                      isSelected
-                        ? "border-primary bg-primary/10 shadow-md scale-105"
-                        : "border-slate-200 hover:border-primary/40 bg-white"
-                    }`}
-                  >
-                    <Avatar className="h-12 w-12">
-                      <AvatarImage src={preset.url} className="object-cover" />
-                      <AvatarFallback className="text-xs font-bold">AV</AvatarFallback>
-                    </Avatar>
-                    <span className="text-[9px] font-black uppercase text-slate-700 text-center truncate w-full">
-                      {preset.name}
-                    </span>
-                    {isSelected && (
-                      <div className="absolute top-1 right-1 bg-primary text-white rounded-full p-0.5 shadow-sm">
-                        <Check className="h-2.5 w-2.5" />
-                      </div>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
 
           {/* Opción de URL externa */}
           <div className="space-y-1.5 pt-1">
-            <Label className="text-[10px] font-black uppercase text-slate-500 tracking-widest">
-              O pegar enlace web de imagen (URL)
+            <Label className="text-[10px] font-black uppercase text-slate-500 tracking-widest flex items-center gap-1">
+              <LinkIcon className="h-3 w-3 text-slate-400" /> O pegar enlace de imagen (URL)
             </Label>
             <div className="flex gap-2">
               <Input
@@ -333,7 +262,7 @@ export function ChangeAvatarDialog({
           </div>
         </div>
 
-        <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 pt-2 border-t">
+        <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 pt-3 border-t">
           <Button
             type="button"
             variant="ghost"
