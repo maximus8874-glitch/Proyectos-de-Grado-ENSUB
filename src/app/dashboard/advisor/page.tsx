@@ -29,6 +29,7 @@ export default function AdvisorDashboard() {
   const { user } = useUser();
   const db = useFirestore();
   const { t } = useLanguage();
+  const { toast } = useToast();
   const ADMIN_WHITELIST = [
     "maximus8874@gmail.com",
     "administracionmaritima@ensub.edu.co",

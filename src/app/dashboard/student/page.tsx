@@ -121,8 +121,8 @@ export default function StudentDashboard() {
                   <Button variant="ghost" size="sm" className="h-auto py-1.5 px-3 text-accent font-bold group shrink-0 border border-accent/10 hover:bg-accent/10" asChild>
                     <Link href={`/dashboard/projects/new?draftId=${draft.id}`} className="flex items-center gap-2">
                       <div className="flex flex-col items-end leading-none text-[10px] uppercase tracking-tighter">
-                        <span>{t('continueDrafting').split(' ')[0]}</span>
-                        <span className="mt-0.5 opacity-80">{t('continueDrafting').split(' ').slice(1).join(' ')}</span>
+                        <span>{(t('continueDrafting') || 'Continuar').split(' ')[0]}</span>
+                        <span className="mt-0.5 opacity-80">{(t('continueDrafting') || '').split(' ').slice(1).join(' ')}</span>
                       </div>
                       <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
                     </Link>

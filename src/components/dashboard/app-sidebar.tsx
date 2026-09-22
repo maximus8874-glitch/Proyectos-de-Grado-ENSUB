@@ -47,6 +47,7 @@ interface AppSidebarProps {
 export function AppSidebar({ role }: AppSidebarProps) {
   const pathname = usePathname();
   const { t } = useLanguage();
+  const { user } = useUser();
   const ADMIN_WHITELIST = [
     "maximus8874@gmail.com",
     "administracionmaritima@ensub.edu.co",
