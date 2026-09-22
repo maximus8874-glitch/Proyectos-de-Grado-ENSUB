@@ -469,12 +469,20 @@ export default function NewProjectPage() {
     e.preventDefault();
     if (!user || !projectId || !db) return;
     
-    const incompleteFields = fieldStatus.filter(f => !f.isComplete);
-    if (incompleteFields.length > 0) {
+    if (!formData.title || formData.title.trim().length === 0) {
       toast({
         variant: "destructive",
-        title: "Propuesta Incompleta",
-        description: `Faltan ${incompleteFields.length} campos por diligenciar correctamente.`,
+        title: "Título Requerido",
+        description: "Por favor escribe el título preliminar de tu propuesta antes de enviarla.",
+      });
+      return;
+    }
+
+    if (!formData.proponent1Name || formData.proponent1Name.trim().length === 0) {
+      toast({
+        variant: "destructive",
+        title: "Nombre Requerido",
+        description: "Por favor ingresa el nombre del estudiante proponente.",
       });
       return;
     }

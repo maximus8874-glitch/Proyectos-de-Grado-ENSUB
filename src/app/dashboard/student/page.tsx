@@ -2,10 +2,10 @@
 "use client";
 
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, query, where, doc, deleteDoc } from "firebase/firestore";
+import { collection, query, where, doc, deleteDoc, updateDoc } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { Plus, FileText, Loader2, FileWarning, ArrowRight, Trash2, TrendingUp, Search, Edit3 } from "lucide-react";
+import { Plus, FileText, Loader2, FileWarning, ArrowRight, Trash2, TrendingUp, Search, Edit3, Send, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { StatusBadge } from "@/components/project/status-badge";
 import { DegreeProject } from "@/lib/types";
@@ -49,6 +49,39 @@ export default function StudentDashboard() {
       errorEmitter.emit('permission-error', new FirestorePermissionError({ path: docRef.path, operation: 'delete' }));
     });
     toast({ title: t('saved') });
+  };
+
+  const handleSendDraft = async (draft: DegreeProject) => {
+    if (!db || !user) return;
+    if (!draft.title || draft.title.trim().length === 0) {
+      toast({
+        variant: "destructive",
+        title: "Título Requerido",
+        description: "El borrador debe tener un título asignado para poder radicarse.",
+      });
+      return;
+    }
+
+    try {
+      const docRef = doc(db, "projects", draft.id);
+      await updateDoc(docRef, {
+        status: "Pendiente",
+        proposalDate: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        progressPercent: 100,
+      });
+
+      toast({
+        title: "¡Propuesta Radicada con Éxito!",
+        description: `Tu proyecto "${draft.title}" ha sido enviado al comité y ahora figura en Proyectos Enviados.`,
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error al enviar",
+        description: error?.message || "No se pudo radicar la propuesta.",
+      });
+    }
   };
 
   if (isLoading) {
@@ -118,15 +151,39 @@ export default function StudentDashboard() {
                     </div>
                     <Progress value={draft.progressPercent || 1} className="h-1 bg-accent/20" />
                   </div>
-                  <Button variant="ghost" size="sm" className="h-auto py-1.5 px-3 text-accent font-bold group shrink-0 border border-accent/10 hover:bg-accent/10" asChild>
-                    <Link href={`/dashboard/projects/new?draftId=${draft.id}`} className="flex items-center gap-2">
-                      <div className="flex flex-col items-end leading-none text-[10px] uppercase tracking-tighter">
-                        <span>{(t('continueDrafting') || 'Continuar').split(' ')[0]}</span>
-                        <span className="mt-0.5 opacity-80">{(t('continueDrafting') || '').split(' ').slice(1).join(' ')}</span>
-                      </div>
-                      <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                    </Link>
-                  </Button>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button variant="ghost" size="sm" className="h-auto py-1.5 px-3 text-accent font-bold group shrink-0 border border-accent/10 hover:bg-accent/10" asChild>
+                      <Link href={`/dashboard/projects/new?draftId=${draft.id}`} className="flex items-center gap-2">
+                        <div className="flex flex-col items-end leading-none text-[10px] uppercase tracking-tighter">
+                          <span>{(t('continueDrafting') || 'Continuar').split(' ')[0]}</span>
+                          <span className="mt-0.5 opacity-80">{(t('continueDrafting') || '').split(' ').slice(1).join(' ')}</span>
+                        </div>
+                        <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                      </Link>
+                    </Button>
+
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button size="sm" className="h-auto py-2 px-3 text-[10px] font-black uppercase tracking-wider gap-1.5 bg-primary hover:bg-primary/90 text-white shadow-md">
+                          <Send className="h-3.5 w-3.5" /> Radicar
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>¿Radicar Propuesta al Comité?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Al radicar la propuesta "{draft.title || 'Sin título'}", pasará a estado <strong>Pendiente de Evaluación</strong> y quedará visible formalmente en el repositorio institucional para los docentes y asesores.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Volver al borrador</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => handleSendDraft(draft)} className="bg-primary text-white hover:bg-primary/90">
+                            Confirmar y Radicar
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
                 </CardFooter>
               </Card>
             ))}
