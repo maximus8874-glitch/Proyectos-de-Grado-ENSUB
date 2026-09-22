@@ -47,9 +47,14 @@ interface AppSidebarProps {
 export function AppSidebar({ role }: AppSidebarProps) {
   const pathname = usePathname();
   const { t } = useLanguage();
-  const { user } = useUser();
+  const ADMIN_WHITELIST = [
+    "maximus8874@gmail.com",
+    "administracionmaritima@ensub.edu.co",
+    "josediazdoria08@gmail.com",
+    "felipetorrez502@gmail.com"
+  ];
 
-  const isSuperUser = user?.email === "felipetorrez502@gmail.com" || user?.email === "administracionmaritima@ensub.edu.co";
+  const isSuperUser = ADMIN_WHITELIST.includes(user?.email?.toLowerCase() || "");
 
   // Ítems de navegación estándar según el rol actual de la vista
   const getStandardMenuItems = () => {
@@ -60,7 +65,6 @@ export function AppSidebar({ role }: AppSidebarProps) {
     if (role === 'student') {
       return [
         ...base,
-        { title: t('myProjects'), icon: FileText, href: `/dashboard/student` },
         { title: t('feedback'), icon: MessageSquare, href: `/dashboard/feedback` },
       ];
     }
@@ -68,7 +72,6 @@ export function AppSidebar({ role }: AppSidebarProps) {
     if (role === 'advisor') {
       return [
         ...base,
-        { title: t('reviewProjects'), icon: ClipboardList, href: `/dashboard/advisor` },
         { title: t('tutorados'), icon: Users, href: `/dashboard/advisor/tutees` },
       ];
     }
@@ -76,8 +79,8 @@ export function AppSidebar({ role }: AppSidebarProps) {
     if (role === 'admin') {
       return [
         ...base,
-        { title: t('globalProjects'), icon: FileText, href: `/dashboard/admin` },
         { title: t('users'), icon: Users, href: `/dashboard/admin/users` },
+        { title: "Gestión de Roles", icon: ShieldCheck, href: `/dashboard/admin/roles` },
       ];
     }
 
