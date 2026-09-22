@@ -113,10 +113,27 @@ export interface DegreeProject {
 
   status: ProjectStatus;
   correcciones?: string;
+  sectionCorrections?: Record<string, {
+    sectionKey: string;
+    sectionTitle: string;
+    comment: string;
+    resolved?: boolean;
+    updatedAt?: string;
+    authorName?: string;
+  }>;
   proposalDate: string;
   progressPercent: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface SectionCorrectionItem {
+  sectionKey: string;
+  sectionTitle: string;
+  comment: string;
+  resolved?: boolean;
+  updatedAt?: string;
+  authorName?: string;
 }
 
 export type UserRole = 'student' | 'advisor' | 'admin';

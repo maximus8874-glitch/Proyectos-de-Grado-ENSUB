@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/componen
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Send, Loader2, CheckCircle2, Clock, Save, TrendingUp, ClipboardCheck, XCircle, Calendar } from "lucide-react";
+import { ArrowLeft, Send, Loader2, CheckCircle2, Clock, Save, TrendingUp, ClipboardCheck, XCircle, Calendar, MessageSquareWarning, AlertTriangle, FileEdit } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { DegreeProject } from "@/lib/types";
@@ -20,6 +20,8 @@ import { useLanguage } from "@/context/language-context";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { recordAuditLog } from "@/lib/audit";
+import { SectionFeedbackBox } from "@/components/project/section-feedback-box";
+import { Badge } from "@/components/ui/badge";
 
 const SPECIALTIES = [
   "Tecnología Naval en Hidrografía",
@@ -489,10 +491,13 @@ export default function NewProjectPage() {
 
     setLoading(true);
     try {
+      const isResubmission = formData.status === 'Corregir';
+      const targetStatus = isResubmission ? 'En Revisión' : 'Pendiente';
+
       await updateDoc(doc(db, "projects", projectId), {
         ...formData,
-        status: "Pendiente",
-        proposalDate: new Date().toISOString(),
+        status: targetStatus,
+        proposalDate: formData.proposalDate || new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         progressPercent: 100,
       });
@@ -506,12 +511,18 @@ export default function NewProjectPage() {
           const userData = userSnap.data();
           actorName = `${userData.firstName || ""} ${userData.lastName || ""}`.trim() || actorName;
         }
+
+        const actionType = isResubmission ? "Propuesta Corregida Reenviada" : "Propuesta Enviada";
+        const actionDetails = isResubmission
+          ? "El estudiante reenvió la propuesta formal con las correcciones solicitadas por el docente."
+          : "El estudiante envió la propuesta formal para revisión del comité.";
+
         await addDoc(collection(db, "projects", projectId, "activityLogs"), {
           actorId: user.uid,
           actorName,
           projectId: projectId,
-          actionType: "Propuesta Enviada",
-          details: "El estudiante envió la propuesta formal para revisión del comité.",
+          actionType,
+          details: actionDetails,
           createdAt: new Date().toISOString()
         });
 
@@ -521,21 +532,27 @@ export default function NewProjectPage() {
           actorEmail: user.email || "unknown",
           actorName,
           actorRole: "student",
-          actionType: "PROJECT_CREATE",
+          actionType: isResubmission ? "PROJECT_UPDATE" : "PROJECT_CREATE",
           entityType: "Project",
           entityId: projectId,
           projectTitle: formData.title || "Sin título",
-          details: `Propuesta de grado formulada y radicada formalmente bajo formato EDUCA-FT-093-JINEN-V03 (${formData.programa || 'Programa no especificado'}).`,
+          details: actionDetails,
           metadata: {
             programa: formData.programa,
             directorPropuesto: formData.proposedDirectorName,
+            isResubmission
           }
         });
       } catch (logErr) {
         console.error("Error creating activity log:", logErr);
       }
 
-      toast({ title: "Propuesta Enviada al 100%" });
+      toast({ 
+        title: isResubmission ? "¡Propuesta Corregida Reenviada!" : "Propuesta Enviada al 100%",
+        description: isResubmission 
+          ? "Tus correcciones han sido remitidas al docente evaluador para nueva revisión." 
+          : "Tu propuesta ha sido radicada formalmente ante el comité."
+      });
       router.push("/dashboard/student");
     } catch (error: any) {
       toast({ variant: "destructive", title: "Error en envío" });
@@ -592,10 +609,43 @@ export default function NewProjectPage() {
 
           <Button onClick={handleSubmit} className="gap-2 rounded-full px-8 shadow-lg hover:scale-105 transition-transform" disabled={loading}>
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-            {t('sendProposal')}
+            {formData.status === 'Corregir' ? "Reenviar Propuesta Corregida" : t('sendProposal')}
           </Button>
         </div>
       </div>
+
+      {formData.status === 'Corregir' && (
+        <div className="bg-amber-500/10 border-2 border-amber-500/40 rounded-2xl p-5 shadow-sm space-y-3 animate-in fade-in slide-in-from-top-2">
+          <div className="flex items-start gap-3 text-amber-900">
+            <div className="p-2 bg-amber-500/20 text-amber-700 rounded-xl shrink-0 mt-0.5">
+              <AlertTriangle className="h-6 w-6" />
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <Badge className="bg-amber-600 text-white uppercase text-[9px] font-black tracking-wider">
+                  Devolución para Ajustes
+                </Badge>
+                <h3 className="font-black text-sm uppercase tracking-tight text-amber-950">
+                  Propuesta Devuelta para Corrección Académica
+                </h3>
+              </div>
+              <p className="text-xs text-amber-900 font-medium leading-relaxed">
+                El docente evaluador ha revisado tu propuesta y ha dejado observaciones específicas para cada planteamiento. Revisa los recuadros resaltados en amarillo en cada pestaña, realiza las modificaciones solicitadas y haz clic en <strong>"Reenviar Propuesta Corregida"</strong>.
+              </p>
+            </div>
+          </div>
+          {(formData.sectionCorrections?.general?.comment || formData.correcciones) && (
+            <div className="p-3.5 bg-white/90 rounded-xl border border-amber-300 text-xs text-amber-950 shadow-sm space-y-1">
+              <span className="text-[10px] font-black uppercase text-amber-800 flex items-center gap-1.5">
+                <MessageSquareWarning className="h-3.5 w-3.5" /> Dictamen General del Evaluador:
+              </span>
+              <p className="font-medium whitespace-pre-wrap leading-relaxed pl-5">
+                {formData.sectionCorrections?.general?.comment || formData.correcciones}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <div className="lg:col-span-3">
@@ -612,6 +662,11 @@ export default function NewProjectPage() {
                 <TabsContent value="identificacion" className="space-y-8 m-0">
                   <div className="grid gap-3">
                     <Label className="text-xs font-black uppercase text-primary">Título Preliminar</Label>
+                    <SectionFeedbackBox 
+                      sectionKey="title" 
+                      corrections={formData.sectionCorrections} 
+                      title="1. Título y Datos Institucionales" 
+                    />
                     <Input 
                       value={formData.title || ""} 
                       onChange={(e) => handleFieldChange("title", e.target.value)} 
@@ -813,6 +868,11 @@ export default function NewProjectPage() {
                 <TabsContent value="problema" className="space-y-6 m-0">
                   <div className="grid gap-3">
                     <Label className="text-xs font-black uppercase">2.1 Descripción del Problema</Label>
+                    <SectionFeedbackBox 
+                      sectionKey="problemStatement" 
+                      corrections={formData.sectionCorrections} 
+                      title="2.1 Descripción del Problema" 
+                    />
                     <Textarea 
                       className="min-h-[250px]" 
                       value={formData.problemStatement || ""} 
@@ -827,6 +887,11 @@ export default function NewProjectPage() {
                   </div>
                   <div className="grid gap-3">
                     <Label className="text-xs font-black uppercase text-primary">2.2 Formulación (Pregunta)</Label>
+                    <SectionFeedbackBox 
+                      sectionKey="problemFormulation" 
+                      corrections={formData.sectionCorrections} 
+                      title="2.2 Formulación (Pregunta)" 
+                    />
                     <Input 
                       className="font-bold h-12" 
                       value={formData.problemFormulation || ""} 
@@ -836,6 +901,11 @@ export default function NewProjectPage() {
                   </div>
                   <div className="grid gap-3">
                     <Label className="text-xs font-black uppercase">2.3 Justificación</Label>
+                    <SectionFeedbackBox 
+                      sectionKey="justification" 
+                      corrections={formData.sectionCorrections} 
+                      title="2.3 Justificación" 
+                    />
                     <Textarea 
                       className="min-h-[200px]" 
                       value={formData.justification || ""} 
@@ -854,6 +924,11 @@ export default function NewProjectPage() {
                 <TabsContent value="objetivos" className="space-y-6 m-0">
                   <div className="grid gap-3">
                     <Label className="text-xs font-black uppercase text-primary">3.1 Objetivo General</Label>
+                    <SectionFeedbackBox 
+                      sectionKey="generalObjective" 
+                      corrections={formData.sectionCorrections} 
+                      title="3.1 Objetivo General" 
+                    />
                     <Input 
                       className="font-bold h-12" 
                       value={formData.generalObjective || ""} 
@@ -863,6 +938,11 @@ export default function NewProjectPage() {
                   </div>
                   <div className="grid gap-3">
                     <Label className="text-xs font-black uppercase">3.2 Objetivos Específicos</Label>
+                    <SectionFeedbackBox 
+                      sectionKey="specificObjectives" 
+                      corrections={formData.sectionCorrections} 
+                      title="3.2 Objetivos Específicos" 
+                    />
                     <Textarea 
                       className="min-h-[250px]" 
                       value={formData.specificObjectives || ""} 
@@ -875,6 +955,11 @@ export default function NewProjectPage() {
                 <TabsContent value="metodologia" className="space-y-6 m-0">
                   <div className="grid gap-3">
                     <Label className="text-xs font-black uppercase">4.1 Diseño Metodológico</Label>
+                    <SectionFeedbackBox 
+                      sectionKey="methodology" 
+                      corrections={formData.sectionCorrections} 
+                      title="4.1 Diseño Metodológico" 
+                    />
                     <Textarea 
                       className="min-h-[250px]" 
                       value={formData.methodology || ""} 
@@ -884,6 +969,11 @@ export default function NewProjectPage() {
                   </div>
                   <div className="grid gap-3">
                     <Label className="text-xs font-black uppercase">4.2 Resultados Esperados</Label>
+                    <SectionFeedbackBox 
+                      sectionKey="expectedResults" 
+                      corrections={formData.sectionCorrections} 
+                      title="4.2 Resultados e Impacto" 
+                    />
                     <Textarea 
                       className="min-h-[150px]" 
                       value={formData.expectedResults || ""} 

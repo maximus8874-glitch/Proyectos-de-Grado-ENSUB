@@ -75,6 +75,7 @@ import { PrintProposalV03 } from "@/components/project/print-proposal-v03";
 import { PrintThesisAPA } from "@/components/project/print-thesis-apa";
 import { ENSUBLogo } from "@/components/institutional/ensub-logo";
 import { ArticuloCientifico } from "@/components/project/articulo-cientifico";
+import { SectionCorrectionDialog } from "@/components/project/section-correction-dialog";
 import { recordAuditLog } from "@/lib/audit";
 import {
   AlertDialog,
@@ -298,7 +299,11 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ id: s
     }
   };
 
-  const updateStatus = async (newStatus: any, commentText?: string) => {
+  const updateStatus = async (
+    newStatus: any, 
+    commentText?: string, 
+    sectionCorrections?: Record<string, any>
+  ) => {
     if (!project || !db || !user) return;
     try {
       const updateData: any = { 
@@ -306,15 +311,16 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ id: s
         updatedAt: new Date().toISOString() 
       };
       
-      if (newStatus === 'Corregir' && commentText) {
-        updateData.correcciones = commentText;
+      if (newStatus === 'Corregir') {
+        if (commentText) updateData.correcciones = commentText;
+        if (sectionCorrections) updateData.sectionCorrections = sectionCorrections;
       }
 
       await updateDoc(doc(db, "projects", id), updateData);
       
       let logDetails = `El proyecto cambió de estado a: ${newStatus}`;
       if (newStatus === 'Corregir' && commentText) {
-        logDetails += `. Correcciones solicitadas: "${commentText}"`;
+        logDetails += `. Correcciones solicitadas en ${sectionCorrections ? Object.keys(sectionCorrections).length : 1} planteamientos.`;
       } else if (newStatus === 'En Revisión') {
         logDetails = `El estudiante envió el proyecto a revisión`;
       } else if (newStatus === 'En Curso') {
@@ -349,7 +355,8 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ id: s
         metadata: {
           previousStatus: project.status,
           newStatus,
-          corrections: commentText || null
+          corrections: commentText || null,
+          sectionCount: sectionCorrections ? Object.keys(sectionCorrections).length : 0
         }
       });
       
@@ -514,25 +521,67 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ id: s
           )}
         </div>
 
-        {project.status === 'Corregir' && project.correcciones && (
-          <Card className="border-orange-200 bg-orange-50/50 rounded-2xl shadow-sm border overflow-hidden">
-            <div className="p-6 flex items-start gap-4">
-              <div className="p-3 bg-orange-100 rounded-xl text-orange-600 shrink-0">
-                <Info className="h-6 w-6" />
+        {project.status === 'Corregir' && (project.correcciones || project.sectionCorrections) && (
+          <Card className="border-orange-300 bg-orange-50/70 rounded-2xl shadow-sm border overflow-hidden">
+            <div className="p-6 space-y-4">
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-orange-100 rounded-xl text-orange-600 shrink-0">
+                  <Info className="h-6 w-6" />
+                </div>
+                <div className="flex-1 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-black uppercase text-orange-800 tracking-tight flex items-center gap-2">
+                      Dictamen de Correcciones por Planteamientos
+                    </h3>
+                    {isStudent && (
+                      <Button size="sm" asChild className="rounded-full gap-2 bg-orange-600 hover:bg-orange-700 text-white shadow-md">
+                        <Link href={`/dashboard/projects/new?draftId=${id}`}>
+                          <Edit3 className="h-4 w-4" /> Corregir Propuesta
+                        </Link>
+                      </Button>
+                    )}
+                  </div>
+                  {project.correcciones && (
+                    <p className="text-xs text-orange-950 font-medium whitespace-pre-wrap leading-relaxed pt-1">
+                      {project.correcciones}
+                    </p>
+                  )}
+                  {isStudent && (
+                    <p className="text-[10px] text-orange-600 font-bold uppercase mt-2">
+                      💡 Haz clic en el botón "Corregir Propuesta" para ver las observaciones al lado de cada casilla, realizar los ajustes y reenviar tu trabajo.
+                    </p>
+                  )}
+                </div>
               </div>
-              <div className="flex-1 space-y-2">
-                <h3 className="text-sm font-black uppercase text-orange-800 tracking-tight flex items-center gap-2">
-                  Observaciones de Corrección Solicitadas
-                </h3>
-                <p className="text-xs text-orange-700 font-medium whitespace-pre-wrap leading-relaxed">
-                  {project.correcciones}
-                </p>
-                {isStudent && (
-                  <p className="text-[10px] text-orange-600 font-bold uppercase mt-2">
-                    💡 Haz clic en el botón "Corregir" arriba para modificar tu propuesta y volver a enviarla.
-                  </p>
-                )}
-              </div>
+
+              {project.sectionCorrections && Object.keys(project.sectionCorrections).length > 0 && (
+                <div className="pt-3 border-t border-orange-200/80">
+                  <span className="text-[10px] font-black uppercase text-orange-800 tracking-wider mb-2.5 block">
+                    Observaciones Detalladas por Planteamiento:
+                  </span>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {Object.entries(project.sectionCorrections).map(([key, item]) => {
+                      const comment = typeof item === 'string' ? item : item.comment;
+                      const title = typeof item === 'object' ? item.sectionTitle : key;
+                      const author = typeof item === 'object' ? item.authorName : null;
+                      return (
+                        <div key={key} className="bg-white/90 border border-orange-200/80 p-3.5 rounded-xl space-y-1 shadow-sm">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-black uppercase text-orange-700 flex items-center gap-1.5">
+                              <span className="h-2 w-2 rounded-full bg-orange-500" />
+                              {title}
+                            </span>
+                            {author && <span className="text-[9px] text-slate-400 font-semibold">{author}</span>}
+                          </div>
+                          <p className="text-xs text-slate-800 font-medium leading-relaxed pt-0.5">
+                            {comment}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           </Card>
         )}
@@ -1474,46 +1523,19 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ id: s
         <AdvisorChatFloating projectId={id} projectTitle={project.title} studentId={project.studentId} advisorIds={project.advisorIds || []} />
       </div>
 
-      <Dialog open={isCorrectionDialogOpen} onOpenChange={setIsCorrectionDialogOpen}>
-        <DialogContent className="sm:max-w-[500px] rounded-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-black uppercase text-primary tracking-tight">Solicitar Correcciones</DialogTitle>
-            <DialogDescription className="text-xs">
-              Escribe detalladamente las observaciones o correcciones que el estudiante debe realizar en su propuesta.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <Label className="text-[10px] font-black uppercase text-primary/60 mb-2 block">Lista de Correcciones</Label>
-            <Textarea
-              value={correctionComment}
-              onChange={(e) => setCorrectionComment(e.target.value)}
-              placeholder="Ej:
-1. Mejorar el planteamiento del problema en la sección 2.1...
-2. El objetivo general debe iniciar con un verbo en infinitivo..."
-              className="min-h-[150px] text-xs"
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCorrectionDialogOpen(false)} className="rounded-full px-5 text-xs font-bold">
-              Cancelar
-            </Button>
-            <Button
-              onClick={async () => {
-                if (!correctionComment.trim()) {
-                  toast({ variant: "destructive", title: "Error", description: "Debe escribir las correcciones." });
-                  return;
-                }
-                await updateStatus('Corregir', correctionComment);
-                setIsCorrectionDialogOpen(false);
-                setCorrectionComment("");
-              }}
-              className="rounded-full px-5 text-xs font-bold bg-orange-600 hover:bg-orange-700 text-white shadow-md"
-            >
-              Enviar Correcciones
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <SectionCorrectionDialog
+        open={isCorrectionDialogOpen}
+        onOpenChange={setIsCorrectionDialogOpen}
+        project={project}
+        evaluatorName={user?.displayName || user?.email || "Docente Evaluador"}
+        onSubmitCorrections={async (sectionCorrections, summary) => {
+          await updateStatus('Corregir', summary, sectionCorrections);
+          toast({
+            title: "Correcciones Enviadas al Estudiante",
+            description: "El estudiante ha recibido las observaciones planteamiento por planteamiento.",
+          });
+        }}
+      />
 
       {/* VISTA DE IMPRESIÓN EXCLUSIVA */}
       <div className={cn(printTarget === 'proposal' ? "print:block" : "print:hidden", "hidden")}>
