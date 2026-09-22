@@ -776,27 +776,9 @@ export default function NewProjectPage() {
                       <Label className="text-[10px] font-black uppercase opacity-60">Director Propuesto</Label>
                       <Input
                         value={formData.proposedDirectorName || ""}
-                        onChange={(e) => {
-                          const name = e.target.value;
-                          const matchedAdvisor = advisors?.find(
-                            (a) => `${a.firstName || ""} ${a.lastName || ""}`.trim().toLowerCase() === name.trim().toLowerCase()
-                          );
-                          setFormData((prev) => ({
-                            ...prev,
-                            proposedDirectorName: name,
-                            advisorIds: matchedAdvisor ? [matchedAdvisor.id] : prev.advisorIds,
-                          }));
-                        }}
+                        onChange={(e) => handleFieldChange("proposedDirectorName", e.target.value)}
                         placeholder="COLOCAR EL NOMBRE DEL DIRECTOR PROPUESTO"
-                        list="advisors-datalist"
                       />
-                      {advisors && advisors.length > 0 && (
-                        <datalist id="advisors-datalist">
-                          {advisors.map((advisor) => (
-                            <option key={advisor.id} value={`${advisor.firstName} ${advisor.lastName}`} />
-                          ))}
-                        </datalist>
-                      )}
                     </div>
                     <div className="grid gap-2">
                       <Label className="text-[10px] font-black uppercase opacity-60">Fecha de Entrega (D/M/A)</Label>
