@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useUser, useFirestore } from "@/firebase";
 import { doc, getDoc } from "firebase/firestore";
-import { Loader2, Languages, Check, LogOut, Settings, User } from "lucide-react";
+import { Loader2, Languages, Check, LogOut, Settings, User, Camera } from "lucide-react";
 import { useLanguage, Language } from "@/context/language-context";
 import {
   DropdownMenu,
@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { EmailVerificationBanner } from "@/components/auth/email-verification-banner";
+import { ChangeAvatarDialog } from "@/components/dashboard/change-avatar-dialog";
 
 export default function DashboardLayout({
   children,
@@ -38,6 +39,7 @@ export default function DashboardLayout({
   const [userData, setUserData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
+  const [isAvatarDialogOpen, setIsAvatarDialogOpen] = useState(false);
 
   const languages: { code: Language; label: string }[] = [
     { code: "es", label: "Español" },
@@ -145,7 +147,7 @@ export default function DashboardLayout({
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Avatar className="h-10 w-10 border-2 border-primary/20 shadow-sm ring-2 ring-white cursor-pointer hover:opacity-90 transition-opacity">
-                    <AvatarImage src={`https://picsum.photos/seed/${user?.uid}/200/200`} />
+                    <AvatarImage src={userData?.photoURL || user?.photoURL || `https://picsum.photos/seed/${user?.uid}/200/200`} className="object-cover" />
                     <AvatarFallback className="bg-primary text-white font-bold">
                       {userData?.firstName?.[0]}{userData?.lastName?.[0]}
                     </AvatarFallback>
@@ -157,6 +159,17 @@ export default function DashboardLayout({
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   
+                  {/* OPCIÓN CAMBIAR FOTO DE PERFIL */}
+                  <DropdownMenuItem 
+                    className="cursor-pointer font-bold text-primary focus:text-primary focus:bg-primary/10"
+                    onClick={() => setIsAvatarDialogOpen(true)}
+                  >
+                    <Camera className="mr-2 h-4 w-4 text-primary" />
+                    <span>Cambiar foto de perfil</span>
+                  </DropdownMenuItem>
+
+                  <DropdownMenuSeparator />
+
                   <DropdownMenuSub>
                     <DropdownMenuSubTrigger className="cursor-pointer">
                       <Languages className="mr-2 h-4 w-4 text-primary" />
@@ -204,6 +217,17 @@ export default function DashboardLayout({
           </main>
         </SidebarInset>
       </div>
+
+      {/* Modal interactivo para Cambiar Foto de Perfil */}
+      <ChangeAvatarDialog
+        open={isAvatarDialogOpen}
+        onOpenChange={setIsAvatarDialogOpen}
+        currentPhotoUrl={userData?.photoURL || user?.photoURL}
+        userName={`${userData?.firstName || ''} ${userData?.lastName || ''}`.trim() || user?.email || 'Usuario'}
+        onAvatarUpdated={(newUrl) => {
+          setUserData((prev: any) => ({ ...prev, photoURL: newUrl }));
+        }}
+      />
     </SidebarProvider>
   );
 }
