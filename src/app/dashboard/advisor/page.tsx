@@ -88,6 +88,45 @@ export default function AdvisorDashboard() {
     }
   };
 
+  const safeGetTime = (val: any): number => {
+    if (!val) return 0;
+    try {
+      if (typeof val === 'number') return val;
+      if (typeof val === 'object' && val?.seconds) return val.seconds * 1000;
+      if (typeof val === 'string') {
+        const t = new Date(val).getTime();
+        return isNaN(t) ? 0 : t;
+      }
+      if (val?.toDate && typeof val.toDate === 'function') {
+        return val.toDate().getTime();
+      }
+      const parsed = new Date(val).getTime();
+      return isNaN(parsed) ? 0 : parsed;
+    } catch {
+      return 0;
+    }
+  };
+
+  const formatSafeDate = (val: any) => {
+    const time = safeGetTime(val);
+    if (time === 0) return 'N/A';
+    try {
+      return new Date(time).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
+    } catch {
+      return 'N/A';
+    }
+  };
+
+  const formatSafeTime = (val: any) => {
+    const time = safeGetTime(val);
+    if (time === 0) return '';
+    try {
+      return new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch {
+      return '';
+    }
+  };
+
   // Filtrado de borradores vs publicados
   const publishedProjects = useMemo(() => {
     if (!rawProjects) return [];
@@ -159,8 +198,8 @@ export default function AdvisorDashboard() {
 
     // Ordenar siempre por los MÁS RECIENTES cargados en la red primero
     return [...filtered].sort((a, b) => {
-      const dateA = new Date(a.updatedAt || a.createdAt || a.proposalDate || 0).getTime();
-      const dateB = new Date(b.updatedAt || b.createdAt || b.proposalDate || 0).getTime();
+      const dateA = safeGetTime(a.updatedAt || a.createdAt || a.proposalDate);
+      const dateB = safeGetTime(b.updatedAt || b.createdAt || b.proposalDate);
       return dateB - dateA;
     });
   }, [publishedProjects, viewFilter, statusFilter, searchTerm, user]);
@@ -173,12 +212,12 @@ export default function AdvisorDashboard() {
     : 0;
   const inProgress = publishedProjects.filter(p => p.status === 'En Curso').length;
 
-  const isRecentProject = (dateString?: string) => {
-    if (!dateString) return false;
-    const projectDate = new Date(dateString).getTime();
-    const now = new Date().getTime();
-    const daysDiff = (now - projectDate) / (1000 * 3600 * 24);
-    return daysDiff <= 7; // Considerado reciente si fue creado/modificado en los últimos 7 días
+  const isRecentProject = (dateVal?: any) => {
+    const time = safeGetTime(dateVal);
+    if (time === 0) return false;
+    const now = Date.now();
+    const daysDiff = (now - time) / (1000 * 3600 * 24);
+    return daysDiff >= 0 && daysDiff <= 7;
   };
 
   if (isLoading) {
@@ -482,10 +521,10 @@ export default function AdvisorDashboard() {
                           <div className="flex flex-col text-xs font-medium text-slate-600">
                             <span className="flex items-center gap-1 text-slate-800 font-bold">
                               <Calendar className="h-3.5 w-3.5 text-primary" />
-                              {updateDate ? new Date(updateDate).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}
+                              {formatSafeDate(updateDate)}
                             </span>
                             <span className="text-[10px] text-muted-foreground mt-0.5">
-                              {updateDate ? new Date(updateDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                              {formatSafeTime(updateDate)}
                             </span>
                           </div>
                         </TableCell>
