@@ -1,0 +1,34 @@
+{
+  "placeholderImages": [
+    {
+      "id": "ensub-logo",
+      "description": "Escudo de la Escuela Naval de Suboficiales ARC Barranquilla.",
+      "imageUrl": "https://picsum.photos/seed/ensub-crest/100/100",
+      "imageHint": "naval crest"
+    },
+    {
+      "id": "academic-hero",
+      "description": "A modern university hallway with students collaborating.",
+      "imageUrl": "https://picsum.photos/seed/academia1/1200/800",
+      "imageHint": "university students"
+    },
+    {
+      "id": "project-collaboration",
+      "description": "Close up of people working on a project proposal.",
+      "imageUrl": "https://picsum.photos/seed/academia2/800/600",
+      "imageHint": "project planning"
+    },
+    {
+      "id": "avatar-student",
+      "description": "Student avatar placeholder",
+      "imageUrl": "https://picsum.photos/seed/student/200/200",
+      "imageHint": "student portrait"
+    },
+    {
+      "id": "avatar-advisor",
+      "description": "Advisor avatar placeholder",
+      "imageUrl": "https://picsum.photos/seed/professor/200/200",
+      "imageHint": "professor portrait"
+    }
+  ]
+}

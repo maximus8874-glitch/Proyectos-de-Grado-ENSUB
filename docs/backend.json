@@ -1,0 +1,61 @@
+
+{
+  "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Representa a un usuario dentro del sistema institucional de la ENSUB.",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "firstName": { "type": "string" },
+        "lastName": { "type": "string" },
+        "role": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "email", "firstName", "lastName", "role", "createdAt"]
+    },
+    "Project": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Project",
+      "type": "object",
+      "description": "Representa el proyecto de grado de un estudiante, abarcando las fases de Propuesta V03 y Tesis APA.",
+      "properties": {
+        "id": { "type": "string" },
+        "studentId": { "type": "string" },
+        "advisorIds": { "type": "array", "items": { "type": "string" } },
+        "title": { "type": "string" },
+        "facultad": { "type": "string" },
+        "programa": { "type": "string" },
+        "curso": { "type": "string" },
+        "researchLine": { "type": "string" },
+        "researchSubLine": { "type": "string" },
+        "status": { "type": "string" },
+        "problemStatement": { "type": "string" },
+        "generalObjective": { "type": "string" },
+        "thesisBackground": { "type": "string" },
+        "thesisTheoreticalFramework": { "type": "string" },
+        "thesisResults": { "type": "string" },
+        "progressPercent": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "studentId", "title", "status", "createdAt"]
+    }
+  },
+  "auth": {
+    "providers": ["password"]
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/backend/entities/User" },
+      "description": "Almacena perfiles de usuarios institucionales."
+    },
+    "/projects/{projectId}": {
+      "schema": { "$ref": "#/backend/entities/Project" },
+      "description": "Almacena los proyectos de grado con su ciclo de vida completo."
+    }
+  }
+}

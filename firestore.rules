@@ -1,0 +1,96 @@
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- FUNCIONES DE AYUDA ---
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isSuperUser() {
+      return isSignedIn() && (
+        request.auth.token.email == "felipetorrez502@gmail.com" || 
+        request.auth.token.email == "administracionmaritima@ensub.edu.co" ||
+        request.auth.token.email == "maximus8874@gmail.com" ||
+        request.auth.token.email == "josediazdoria08@gmail.com"
+      );
+    }
+
+    function isAdmin() {
+      return isSuperUser() || (isSignedIn() && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid)));
+    }
+
+    /** 
+     * Verifica si el usuario es miembro del proyecto.
+     * Solo el estudiante que creó el proyecto o los asesores explícitamente asignados pueden entrar.
+     */
+    function isProjectMember(data) {
+      return isSignedIn() && (
+        isSuperUser() ||
+        (data.studentId != null && data.studentId == request.auth.uid) || 
+        (data.advisorIds != null && request.auth.uid in data.advisorIds)
+      );
+    }
+
+    // --- COLECCIONES ---
+
+    match /users/{userId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn(); // Permitir listar usuarios para que estudiantes elijan director
+      allow create, update: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    match /roles_admin/{userId} {
+      allow get, list: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /roles_advisor/{userId} {
+      allow get, list: if isSignedIn();
+      allow write: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+    }
+
+    match /projects/{projectId} {
+      allow list: if isSignedIn() && (
+        isAdmin() || 
+        resource.data.studentId == request.auth.uid || 
+        (resource.data.advisorIds != null && request.auth.uid in resource.data.advisorIds)
+      );
+      
+      allow get: if isSignedIn() && (isAdmin() || isProjectMember(resource.data));
+      
+      allow create: if isSignedIn() && (request.resource.data.studentId == request.auth.uid || isAdmin());
+      
+      // SOLO el director asignado o el estudiante dueño (o admin) pueden actualizar
+      allow update: if isAdmin() || isProjectMember(resource.data);
+      
+      allow delete: if isAdmin() || (isSignedIn() && resource.data.studentId == request.auth.uid);
+
+      match /{subcollection}/{documentId} {
+        allow list, get: if isAdmin() || isProjectMember(get(/databases/$(database)/documents/projects/$(projectId)).data);
+        allow create: if isSignedIn() && (isSuperUser() || isProjectMember(get(/databases/$(database)/documents/projects/$(projectId)).data));
+        allow update: if isAdmin() || isProjectMember(get(/databases/$(database)/documents/projects/$(projectId)).data);
+        allow delete: if isAdmin();
+      }
+    }
+
+    match /project_assignments/{assignmentId} {
+      allow read: if isAdmin() || (isSignedIn() && resource.data.advisorId == request.auth.uid);
+      allow write: if isAdmin();
+    }
+
+    match /users/{userId}/notifications/{notificationId} {
+      allow read, write: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+    }
+
+    // --- BITÁCORA DE AUDITORÍA FORENSE INMUTABLE ---
+    match /audit_logs/{logId} {
+      allow get, list: if isAdmin();
+      allow create: if isSignedIn();
+      allow update, delete: if false; // Inmutable: nadie puede alterar ni borrar la bitácora
+    }
+  }
+}
