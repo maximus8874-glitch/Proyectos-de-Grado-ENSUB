@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, query, doc, deleteDoc } from "firebase/firestore";
+import { collection, query, doc, deleteDoc, updateDoc, addDoc, getDoc } from "firebase/firestore";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { StatusBadge } from "@/components/project/status-badge";
@@ -24,12 +24,17 @@ import {
   IdCard, 
   GraduationCap, 
   Globe2, 
-  Filter 
+  Filter,
+  UserPlus,
+  UserCheck,
+  UserMinus,
+  CheckCircle2
 } from "lucide-react";
 import Link from "next/link";
 import { Progress } from "@/components/ui/progress";
 import { useLanguage } from "@/context/language-context";
 import { useToast } from "@/hooks/use-toast";
+import { recordAuditLog } from "@/lib/audit";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,6 +49,9 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 
+const normalizeSearch = (str: string) =>
+  (str || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+
 export default function AdvisorDashboard() {
   const { user } = useUser();
   const db = useFirestore();
@@ -53,6 +61,7 @@ export default function AdvisorDashboard() {
   const [searchTerm, setSearchTerm] = useState("");
   const [viewFilter, setViewFilter] = useState<"all" | "assigned">("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [assigningId, setAssigningId] = useState<string | null>(null);
 
   const ADMIN_WHITELIST = [
     "maximus8874@gmail.com",
@@ -70,6 +79,128 @@ export default function AdvisorDashboard() {
   }, [db, user]);
 
   const { data: rawProjects, isLoading } = useCollection<any>(projectsQuery);
+
+  const handleAssignSelf = async (project: any) => {
+    if (!db || !user) return;
+    setAssigningId(project.id);
+    try {
+      let actorName = user.displayName || user.email || "Docente";
+      try {
+        const userRef = doc(db, "users", user.uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          const userData = userSnap.data();
+          actorName = `${userData.firstName || ""} ${userData.lastName || ""}`.trim() || actorName;
+        }
+      } catch (err) {
+        console.error("Error fetching user data:", err);
+      }
+
+      const currentAdvisorIds: string[] = Array.isArray(project.advisorIds) ? [...project.advisorIds] : [];
+      if (!currentAdvisorIds.includes(user.uid)) {
+        currentAdvisorIds.push(user.uid);
+      }
+
+      const updateData: any = {
+        advisorIds: currentAdvisorIds,
+        updatedAt: new Date().toISOString(),
+      };
+
+      if (!project.proposedDirectorName || project.proposedDirectorName.includes("COLOCAR")) {
+        updateData.proposedDirectorName = actorName;
+      }
+
+      await updateDoc(doc(db, "projects", project.id), updateData);
+
+      try {
+        await addDoc(collection(db, "projects", project.id, "activityLogs"), {
+          actorId: user.uid,
+          actorName,
+          projectId: project.id,
+          actionType: "Asignación de Asesor",
+          details: `El docente ${actorName} se asignó como tutor/evaluador de este trabajo de grado.`,
+          createdAt: new Date().toISOString()
+        });
+
+        await recordAuditLog(db, {
+          actorId: user.uid,
+          actorEmail: user.email || "unknown",
+          actorName,
+          actorRole: isSuperUser ? "admin" : "advisor",
+          actionType: "PROJECT_ASSIGN_ADVISOR",
+          entityType: "Project",
+          entityId: project.id,
+          projectTitle: project.title || "Sin título",
+          details: `El docente ${actorName} tomó la tutoría/evaluación de este trabajo de grado.`,
+        });
+      } catch (logErr) {
+        console.error("Error creating activity log:", logErr);
+      }
+
+      toast({
+        title: "¡Proyecto Asignado!",
+        description: `Te has vinculado al trabajo "${project.title || 'Trabajo de Grado'}". Ahora figura en tu pestaña "Mis Asignados".`,
+      });
+    } catch (error: any) {
+      console.error("Error assigning project:", error);
+      toast({
+        variant: "destructive",
+        title: "Error de asignación",
+        description: error?.message || "No se pudo vincular el proyecto.",
+      });
+    } finally {
+      setAssigningId(null);
+    }
+  };
+
+  const handleUnassignSelf = async (project: any) => {
+    if (!db || !user) return;
+    setAssigningId(project.id);
+    try {
+      let actorName = user.displayName || user.email || "Docente";
+      try {
+        const userRef = doc(db, "users", user.uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          const userData = userSnap.data();
+          actorName = `${userData.firstName || ""} ${userData.lastName || ""}`.trim() || actorName;
+        }
+      } catch (err) {}
+
+      const currentAdvisorIds: string[] = Array.isArray(project.advisorIds) ? project.advisorIds : [];
+      const updatedAdvisorIds = currentAdvisorIds.filter(id => id !== user.uid);
+
+      await updateDoc(doc(db, "projects", project.id), {
+        advisorIds: updatedAdvisorIds,
+        updatedAt: new Date().toISOString(),
+      });
+
+      await recordAuditLog(db, {
+        actorId: user.uid,
+        actorEmail: user.email || "unknown",
+        actorName,
+        actorRole: isSuperUser ? "admin" : "advisor",
+        actionType: "PROJECT_UNASSIGN_ADVISOR",
+        entityType: "Project",
+        entityId: project.id,
+        projectTitle: project.title || "Sin título",
+        details: `El docente ${actorName} se desvinculó de este trabajo de grado.`,
+      });
+
+      toast({
+        title: "Desvinculación Completa",
+        description: `Te has desvinculado de la tutoría de "${project.title}".`,
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error al desvincular",
+        description: error?.message || "No se pudo remover la asignación.",
+      });
+    } finally {
+      setAssigningId(null);
+    }
+  };
 
   const handleDeleteProject = async (projectId: string, projectTitle?: string) => {
     if (!db || !isSuperUser) return;
@@ -127,15 +258,11 @@ export default function AdvisorDashboard() {
     }
   };
 
-  // Filtrado de borradores vs publicados
+  // Proyectos disponibles en la red institucional
   const publishedProjects = useMemo(() => {
     if (!rawProjects) return [];
-    return rawProjects.filter(p => {
-      // Si es superusuario o el creador, ve borradores. De lo contrario, solo proyectos enviados/publicados.
-      if (isSuperUser || p.studentId === user?.uid) return true;
-      return p.status !== 'Borrador';
-    });
-  }, [rawProjects, isSuperUser, user]);
+    return rawProjects;
+  }, [rawProjects]);
 
   // Si no es borrador, el progreso es 100% para fines de visualización de la propuesta enviada
   const getDisplayProgress = (project: any) => {
@@ -153,7 +280,7 @@ export default function AdvisorDashboard() {
       filtered = filtered.filter(p => 
         p.advisorIds?.includes(user.uid) || 
         p.directorId === user.uid ||
-        (p.proposedDirectorName && user.displayName && p.proposedDirectorName.toLowerCase().includes(user.displayName.toLowerCase()))
+        (p.proposedDirectorName && user.displayName && normalizeSearch(p.proposedDirectorName).includes(normalizeSearch(user.displayName)))
       );
     }
 
@@ -162,22 +289,22 @@ export default function AdvisorDashboard() {
       filtered = filtered.filter(p => p.status === statusFilter);
     }
 
-    // Filtro por término de búsqueda (Nombre, Cédula/ID, Título, Programa, Director)
+    // Filtro por término de búsqueda (Nombre, Cédula/ID, Título, Programa, Director, etc.)
     if (searchTerm.trim()) {
-      const term = searchTerm.toLowerCase().trim();
+      const term = normalizeSearch(searchTerm);
       filtered = filtered.filter(p => {
-        const title = (p.title || "").toLowerCase();
-        const prop1Name = (p.proponent1Name || "").toLowerCase();
-        const prop1Id = (p.proponent1Id || "").toLowerCase();
-        const prop2Name = (p.proponent2Name || "").toLowerCase();
-        const prop2Id = (p.proponent2Id || "").toLowerCase();
-        const studentName = (p.studentName || "").toLowerCase();
-        const programa = (p.programa || "").toLowerCase();
-        const director = (p.proposedDirectorName || "").toLowerCase();
-        const area = (p.researchArea || "").toLowerCase();
-        const linea = (p.researchLine || "").toLowerCase();
-        const sublinea = (p.researchSubLine || "").toLowerCase();
-        const curso = (p.curso || "").toLowerCase();
+        const title = normalizeSearch(p.title);
+        const prop1Name = normalizeSearch(p.proponent1Name);
+        const prop1Id = normalizeSearch(p.proponent1Id);
+        const prop2Name = normalizeSearch(p.proponent2Name);
+        const prop2Id = normalizeSearch(p.proponent2Id);
+        const studentName = normalizeSearch(p.studentName);
+        const programa = normalizeSearch(p.programa);
+        const director = normalizeSearch(p.proposedDirectorName);
+        const area = normalizeSearch(p.researchArea);
+        const linea = normalizeSearch(p.researchLine);
+        const sublinea = normalizeSearch(p.researchSubLine);
+        const curso = normalizeSearch(p.curso);
 
         return (
           title.includes(term) ||
@@ -346,6 +473,7 @@ export default function AdvisorDashboard() {
                 { label: "En Revisión", value: "En Revisión" },
                 { label: "En Curso", value: "En Curso" },
                 { label: "Corregir", value: "Corregir" },
+                { label: "Borradores", value: "Borrador" },
                 { label: "Defendido / Completado", value: "Defendido" },
               ].map((filter) => (
                 <button
@@ -393,7 +521,7 @@ export default function AdvisorDashboard() {
                   {searchTerm 
                     ? `No encontramos ningún trabajo de grado que coincida con "${searchTerm}". Verifica el nombre, número de identificación o palabras clave del título.` 
                     : viewFilter === "assigned"
-                      ? "No tienes proyectos directamente asignados bajo tu tutela actualmente. Cambia la pestaña a 'Todos en la Red' para ver todos los trabajos cargados."
+                      ? "No tienes proyectos directamente asignados bajo tu tutela actualmente. Cambia la pestaña a 'Todos en la Red' para ver todos los trabajos cargados y hacer clic en 'Asignarme'."
                       : "Aún no hay propuestas de grado radicadas en la red institucional."
                   }
                 </p>
@@ -445,12 +573,20 @@ export default function AdvisorDashboard() {
                     const student2Name = project.proponent2Name;
                     const student2Id = project.proponent2Id;
 
+                    const isAssignedToMe = Boolean(
+                      user && (
+                        project.advisorIds?.includes(user.uid) || 
+                        project.directorId === user.uid ||
+                        (project.proposedDirectorName && user.displayName && normalizeSearch(project.proposedDirectorName).includes(normalizeSearch(user.displayName)))
+                      )
+                    );
+
                     return (
                       <TableRow key={project.id} className="group hover:bg-slate-50/70 transition-colors">
                         {/* Columna 1: Proyecto y Programa */}
                         <TableCell className="max-w-md py-4">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
+                          <div className="space-y-1.5">
+                            <div className="flex flex-wrap items-center gap-1.5">
                               {isRecent && (
                                 <Badge className="bg-emerald-500 hover:bg-emerald-600 text-[9px] font-black uppercase tracking-wider py-0 px-1.5 h-4">
                                   <Sparkles className="h-2.5 w-2.5 mr-0.5" /> Reciente
@@ -459,6 +595,11 @@ export default function AdvisorDashboard() {
                               <span className="text-[10px] font-black uppercase text-primary bg-primary/10 px-2 py-0.5 rounded">
                                 {project.programa || "Programa General"}
                               </span>
+                              {isAssignedToMe && (
+                                <Badge className="bg-emerald-600 text-white text-[9px] font-black uppercase tracking-wider py-0 px-2 h-4 gap-1 shadow-sm">
+                                  <UserCheck className="h-2.5 w-2.5" /> Mi Asignado
+                                </Badge>
+                              )}
                             </div>
 
                             <Link 
@@ -471,7 +612,7 @@ export default function AdvisorDashboard() {
                             {project.proposedDirectorName && (
                               <p className="text-[10px] text-muted-foreground flex items-center gap-1 font-medium">
                                 <GraduationCap className="h-3 w-3 text-slate-400" /> 
-                                Director: <span className="font-bold text-slate-700">{project.proposedDirectorName}</span>
+                                Director/Asesor: <span className="font-bold text-slate-700">{project.proposedDirectorName}</span>
                               </p>
                             )}
                           </div>
@@ -580,14 +721,38 @@ export default function AdvisorDashboard() {
                               </AlertDialog>
                             )}
 
+                            {isAssignedToMe ? (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleUnassignSelf(project)}
+                                disabled={assigningId === project.id}
+                                className="h-8 w-8 p-0 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full"
+                                title="Desvincularme de este proyecto"
+                              >
+                                {assigningId === project.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <UserMinus className="h-4 w-4" />}
+                              </Button>
+                            ) : (
+                              <Button
+                                size="sm"
+                                onClick={() => handleAssignSelf(project)}
+                                disabled={assigningId === project.id}
+                                className="rounded-full px-3.5 h-8 text-[11px] font-black uppercase tracking-wider bg-orange-600 hover:bg-orange-700 text-white gap-1.5 shadow-sm transition-transform hover:scale-105"
+                                title="Asignarme este trabajo de grado para tutoría/evaluación"
+                              >
+                                {assigningId === project.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <UserPlus className="h-3.5 w-3.5" />}
+                                Asignarme
+                              </Button>
+                            )}
+
                             <Button 
                               variant="outline" 
                               size="sm" 
                               asChild 
-                              className="rounded-full px-5 font-bold hover:bg-primary hover:text-white transition-all shadow-sm border-slate-300"
+                              className="rounded-full px-4 h-8 font-bold hover:bg-primary hover:text-white transition-all shadow-sm border-slate-300"
                             >
                               <Link href={`/dashboard/projects/${project.id}`}>
-                                {t('verify') || "Ver Proyecto"}
+                                {t('verify') || "Revisar"}
                               </Link>
                             </Button>
                           </div>

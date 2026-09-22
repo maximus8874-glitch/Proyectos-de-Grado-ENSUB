@@ -433,6 +433,68 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ id: s
     }, 100);
   };
 
+  const [isAssigning, setIsAssigning] = useState(false);
+
+  const handleAssignSelf = async () => {
+    if (!db || !user || !project) return;
+    setIsAssigning(true);
+    try {
+      let actorName = user.displayName || user.email || "Docente";
+      try {
+        const userRef = doc(db, "users", user.uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          const userData = userSnap.data();
+          actorName = `${userData.firstName || ""} ${userData.lastName || ""}`.trim() || actorName;
+        }
+      } catch (err) {
+        console.error("Error fetching user data:", err);
+      }
+
+      const currentAdvisorIds: string[] = Array.isArray(project.advisorIds) ? [...project.advisorIds] : [];
+      if (!currentAdvisorIds.includes(user.uid)) {
+        currentAdvisorIds.push(user.uid);
+      }
+
+      const updateData: any = {
+        advisorIds: currentAdvisorIds,
+        updatedAt: new Date().toISOString(),
+      };
+
+      if (!project.proposedDirectorName || project.proposedDirectorName.includes("COLOCAR")) {
+        updateData.proposedDirectorName = actorName;
+      }
+
+      await updateDoc(doc(db, "projects", id), updateData);
+      await logActivity("Asignación de Tutor", `El docente ${actorName} se asignó como asesor/evaluador de este trabajo.`);
+
+      await recordAuditLog(db, {
+        actorId: user.uid,
+        actorEmail: user.email || "unknown",
+        actorName,
+        actorRole: isSuperUser ? "admin" : "advisor",
+        actionType: "PROJECT_ASSIGN_ADVISOR",
+        entityType: "Project",
+        entityId: id,
+        projectTitle: project.title,
+        details: `El docente ${actorName} tomó la tutoría/evaluación de este trabajo de grado.`,
+      });
+
+      toast({
+        title: "¡Proyecto Asignado!",
+        description: "Te has vinculado como asesor/evaluador de este proyecto. Ahora figura en tu panel 'Mis Asignados'.",
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error de asignación",
+        description: error?.message || "No se pudo vincular al proyecto.",
+      });
+    } finally {
+      setIsAssigning(false);
+    }
+  };
+
   if (isProjectLoading) return <div className="flex items-center justify-center h-screen"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   if (!project) return <div className="p-8 text-center">Proyecto no encontrado.</div>;
 
@@ -458,6 +520,35 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ id: s
   return (
     <>
       <div className="space-y-6 max-w-7xl mx-auto animate-in fade-in duration-500 pb-12 print:hidden">
+        {/* BANNER DE ASIGNACIÓN PARA DOCENTES */}
+        {!isAdvisor && !isStudent && (
+          <Card className="border-2 border-primary/30 bg-primary/5 rounded-2xl p-5 shadow-sm">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-3.5">
+                <div className="p-3 bg-primary text-white rounded-xl shadow-inner">
+                  <GraduationCap className="h-6 w-6" />
+                </div>
+                <div className="space-y-0.5">
+                  <h3 className="font-black text-sm uppercase tracking-tight text-primary">
+                    ¿Deseas evaluar o asesorar este trabajo de grado?
+                  </h3>
+                  <p className="text-xs text-slate-600 font-medium">
+                    Al asignarte como asesor/evaluador, este proyecto se vinculará a tu panel "Mis Asignados" y podrás calificarlo, solicitar correcciones planteamiento por planteamiento y realizar el seguimiento continuo.
+                  </p>
+                </div>
+              </div>
+              <Button 
+                onClick={handleAssignSelf}
+                disabled={isAssigning}
+                className="rounded-full px-6 font-black uppercase text-xs tracking-wider gap-2 shadow-md bg-orange-600 hover:bg-orange-700 text-white shrink-0 hover:scale-105 transition-transform"
+              >
+                {isAssigning ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+                Asignarme como Asesor / Evaluador
+              </Button>
+            </div>
+          </Card>
+        )}
+
         {/* HEADER SECTION */}
         <div className="flex flex-col md:flex-row md:items-center gap-4 bg-white p-6 rounded-2xl border shadow-sm">
           <Button variant="ghost" size="icon" asChild className="rounded-full hover:bg-primary/10">

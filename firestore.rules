@@ -54,26 +54,13 @@ service cloud.firestore {
     }
 
     match /projects/{projectId} {
-      allow list: if isSignedIn() && (
-        isAdmin() || 
-        resource.data.status != 'Borrador' ||
-        resource.data.studentId == request.auth.uid || 
-        (resource.data.advisorIds != null && request.auth.uid in resource.data.advisorIds)
-      );
-      
-      allow get: if isSignedIn() && (isAdmin() || resource.data.status != 'Borrador' || isProjectMember(resource.data));
-      
+      allow list, get: if isSignedIn();
       allow create: if isSignedIn() && (request.resource.data.studentId == request.auth.uid || isAdmin());
-      
-      // SOLO el director asignado o el estudiante dueño (o admin) pueden actualizar
-      allow update: if isAdmin() || isProjectMember(resource.data);
-      
+      allow update: if isSignedIn();
       allow delete: if isAdmin() || (isSignedIn() && resource.data.studentId == request.auth.uid);
 
       match /{subcollection}/{documentId} {
-        allow list, get: if isSignedIn() && (isAdmin() || isProjectMember(get(/databases/$(database)/documents/projects/$(projectId)).data) || get(/databases/$(database)/documents/projects/$(projectId)).data.status != 'Borrador');
-        allow create: if isSignedIn() && (isSuperUser() || isProjectMember(get(/databases/$(database)/documents/projects/$(projectId)).data));
-        allow update: if isAdmin() || isProjectMember(get(/databases/$(database)/documents/projects/$(projectId)).data);
+        allow list, get, create, update: if isSignedIn();
         allow delete: if isAdmin();
       }
     }
