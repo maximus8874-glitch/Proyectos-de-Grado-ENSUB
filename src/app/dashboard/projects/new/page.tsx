@@ -774,12 +774,29 @@ export default function NewProjectPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="grid gap-2">
                       <Label className="text-[10px] font-black uppercase opacity-60">Director Propuesto</Label>
-                      <Select value={formData.advisorIds?.[0] || ""} onValueChange={handleAdvisorSelect}>
-                        <SelectTrigger><SelectValue placeholder="COLOCAR EL NOMBRE DEL DIRECTOR PROPUESTO" /></SelectTrigger>
-                        <SelectContent>
-                          {advisors?.map(advisor => <SelectItem key={advisor.id} value={advisor.id}>{advisor.firstName} {advisor.lastName}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
+                      <Input
+                        value={formData.proposedDirectorName || ""}
+                        onChange={(e) => {
+                          const name = e.target.value;
+                          const matchedAdvisor = advisors?.find(
+                            (a) => `${a.firstName || ""} ${a.lastName || ""}`.trim().toLowerCase() === name.trim().toLowerCase()
+                          );
+                          setFormData((prev) => ({
+                            ...prev,
+                            proposedDirectorName: name,
+                            advisorIds: matchedAdvisor ? [matchedAdvisor.id] : prev.advisorIds,
+                          }));
+                        }}
+                        placeholder="COLOCAR EL NOMBRE DEL DIRECTOR PROPUESTO"
+                        list="advisors-datalist"
+                      />
+                      {advisors && advisors.length > 0 && (
+                        <datalist id="advisors-datalist">
+                          {advisors.map((advisor) => (
+                            <option key={advisor.id} value={`${advisor.firstName} ${advisor.lastName}`} />
+                          ))}
+                        </datalist>
+                      )}
                     </div>
                     <div className="grid gap-2">
                       <Label className="text-[10px] font-black uppercase opacity-60">Fecha de Entrega (D/M/A)</Label>
