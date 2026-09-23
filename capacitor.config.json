@@ -1,0 +1,17 @@
+{
+  "appId": "co.edu.ensub.proyectos",
+  "appName": "ENSUB Proyectos",
+  "webDir": ".next",
+  "server": {
+    "url": "https://gestiondeproyectosensub.netlify.app",
+    "cleartext": true
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "backgroundColor": "#0F2847",
+      "showSpinner": true,
+      "spinnerColor": "#FACC15"
+    }
+  }
+}

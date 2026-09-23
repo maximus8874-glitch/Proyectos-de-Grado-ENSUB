@@ -1,0 +1,26 @@
+{
+  "name": "ENSUB - Gestión de Proyectos de Grado",
+  "short_name": "ENSUB Proyectos",
+  "description": "Plataforma oficial para la trazabilidad, supervisión y éxito de los trabajos de investigación formativa de la Escuela Naval de Suboficiales ARC Barranquilla.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0F2847",
+  "theme_color": "#0F2847",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "categories": ["education", "productivity"],
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}
