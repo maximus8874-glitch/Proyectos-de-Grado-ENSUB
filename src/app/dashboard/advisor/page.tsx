@@ -72,7 +72,15 @@ export default function AdvisorDashboard() {
 
   const isSuperUser = ADMIN_WHITELIST.includes(user?.email?.toLowerCase() || "");
 
-  // Consulta de proyectos enviados/publicados (compatible 100% con las reglas de Firestore)
+  // Consulta general de proyectos en la red
+  const allProjectsQuery = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    return query(collection(db, "projects"));
+  }, [db, user]);
+
+  const { data: allProjects } = useCollection<any>(allProjectsQuery);
+
+  // Consulta de proyectos enviados/publicados
   const submittedProjectsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
     return query(
@@ -103,22 +111,14 @@ export default function AdvisorDashboard() {
 
   const { data: myAssignedProjects } = useCollection<any>(myAssignedQuery);
 
-  // Consulta para superadministradores
-  const adminAllProjectsQuery = useMemoFirebase(() => {
-    if (!db || !user || !isSuperUser) return null;
-    return query(collection(db, "projects"));
-  }, [db, user, isSuperUser]);
-
-  const { data: adminAllProjects } = useCollection<any>(adminAllProjectsQuery);
-
   // Fusión unificada y reactiva de proyectos
   const rawProjects = useMemo(() => {
+    if (allProjects && allProjects.length > 0) return allProjects;
     const map = new Map<string, any>();
     (submittedProjects || []).forEach(p => map.set(p.id, p));
     (myAssignedProjects || []).forEach(p => map.set(p.id, p));
-    (adminAllProjects || []).forEach(p => map.set(p.id, p));
     return Array.from(map.values());
-  }, [submittedProjects, myAssignedProjects, adminAllProjects]);
+  }, [allProjects, submittedProjects, myAssignedProjects]);
 
   const isLoading = isSubmittedLoading && (!rawProjects || rawProjects.length === 0);
 
