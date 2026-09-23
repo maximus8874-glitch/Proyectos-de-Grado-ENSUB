@@ -1,7 +1,7 @@
 {
   "appId": "co.edu.ensub.proyectos",
   "appName": "ENSUB Proyectos",
-  "webDir": ".next",
+  "webDir": "public",
   "server": {
     "url": "https://gestiondeproyectosensub.netlify.app",
     "cleartext": true
