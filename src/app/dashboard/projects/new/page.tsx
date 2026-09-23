@@ -1,7 +1,9 @@
 
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+export const dynamic = "force-dynamic";
+
+import { useState, useEffect, useMemo, Suspense } from "react";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, doc, setDoc, getDoc, getDocs, updateDoc, query, where, addDoc } from "firebase/firestore";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -309,7 +311,7 @@ const PROGRESS_FIELDS: { key: keyof DegreeProject; label: string }[] = [
   { key: "expectedResults", label: "Resultados e Impacto" }
 ];
 
-export default function NewProjectPage() {
+function NewProjectForm() {
   const { user } = useUser();
   const db = useFirestore();
   const router = useRouter();
@@ -1030,5 +1032,13 @@ export default function NewProjectPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function NewProjectPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center h-screen"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>
+      <NewProjectForm />
+    </Suspense>
   );
 }

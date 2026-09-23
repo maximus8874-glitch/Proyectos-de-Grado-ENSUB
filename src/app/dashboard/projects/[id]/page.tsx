@@ -66,7 +66,8 @@ import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { AdvisorChatFloating } from "@/components/project/advisor-chat-floating";
-import { DegreeProject, ActivityLog } from "@/lib/types";
+import { DegreeProject, ActivityLog, SectionCorrectionItem } from "@/lib/types";
+import { InlineSectionFeedback } from "@/components/project/inline-section-feedback";
 import { useLanguage } from "@/context/language-context";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
@@ -400,6 +401,94 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ id: s
     }
   };
 
+  const handleSaveSingleCorrection = async (sectionKey: string, sectionTitle: string, comment: string) => {
+    if (!db || !project || !user) return;
+    try {
+      let actorName = user.displayName || user.email || "Docente Evaluador";
+      try {
+        const userRef = doc(db, "users", user.uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          const userData = userSnap.data();
+          actorName = `${userData.firstName || ""} ${userData.lastName || ""}`.trim() || actorName;
+        }
+      } catch (err) {
+        console.error("Error getting user name:", err);
+      }
+
+      const currentCorrections: Record<string, SectionCorrectionItem> = {
+        ...(project.sectionCorrections || {}),
+      };
+
+      currentCorrections[sectionKey] = {
+        sectionKey,
+        sectionTitle,
+        comment,
+        authorName: actorName,
+        updatedAt: new Date().toISOString()
+      };
+
+      const synthesis = Object.values(currentCorrections)
+        .map(item => `[${item.sectionTitle}]: ${item.comment}`)
+        .join("\n\n");
+
+      await updateDoc(doc(db, "projects", id), {
+        sectionCorrections: currentCorrections,
+        correcciones: synthesis,
+        updatedAt: new Date().toISOString()
+      });
+
+      await logActivity("Observación en Planteamiento", `El docente ${actorName} registró una observación para "${sectionTitle}".`);
+
+      toast({
+        title: "Observación Guardada",
+        description: `Se registró la corrección para "${sectionTitle}".`
+      });
+    } catch (error: any) {
+      console.error("Error saving section correction:", error);
+      toast({
+        variant: "destructive",
+        title: "Error al guardar observación",
+        description: error?.message || "No se pudo guardar la corrección."
+      });
+    }
+  };
+
+  const handleRemoveSingleCorrection = async (sectionKey: string) => {
+    if (!db || !project || !user) return;
+    try {
+      const currentCorrections: Record<string, SectionCorrectionItem> = {
+        ...(project.sectionCorrections || {}),
+      };
+
+      const removedItem = currentCorrections[sectionKey];
+      delete currentCorrections[sectionKey];
+
+      const synthesis = Object.values(currentCorrections)
+        .map(item => `[${item.sectionTitle}]: ${item.comment}`)
+        .join("\n\n");
+
+      await updateDoc(doc(db, "projects", id), {
+        sectionCorrections: currentCorrections,
+        correcciones: synthesis || null,
+        updatedAt: new Date().toISOString()
+      });
+
+      await logActivity("Observación Eliminada", `Se removió la observación de "${removedItem?.sectionTitle || sectionKey}".`);
+
+      toast({
+        title: "Observación Eliminada",
+        description: `Se eliminó la corrección de "${removedItem?.sectionTitle || sectionKey}".`
+      });
+    } catch (error: any) {
+      console.error("Error removing section correction:", error);
+      toast({
+        variant: "destructive",
+        title: "Error al eliminar observación"
+      });
+    }
+  };
+
   const handleDeleteProject = async () => {
     if (!db || !isSuperUser || !user || !project) return;
     setIsDeleting(true);
@@ -510,6 +599,7 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ id: s
   const isStudent = project.studentId === user?.uid;
   const canViewThesis = ['En Curso', 'Defendido', 'Completado', 'Rechazado'].includes(project.status);
   const canEditThesis = isStudent && project.status === 'En Curso';
+  const activeCorrectionsCount = project.sectionCorrections ? Object.keys(project.sectionCorrections).length : 0;
 
   const integrityCheck = PROGRESS_FIELDS.map(field => {
     const value = project[field.key as keyof DegreeProject];
@@ -859,6 +949,14 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ id: s
                     <h2 className="text-xl font-black leading-tight uppercase tracking-tight">
                       {project.title}
                     </h2>
+                    <InlineSectionFeedback
+                      sectionKey="title"
+                      sectionTitle="Título del Proyecto"
+                      existingCorrection={project.sectionCorrections?.title}
+                      onSaveCorrection={handleSaveSingleCorrection}
+                      onRemoveCorrection={handleRemoveSingleCorrection}
+                      isAdvisor={isAdvisor}
+                    />
                   </CardContent>
                 </Card>
 
@@ -875,14 +973,38 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ id: s
                       <div className="bg-slate-50 p-6 rounded-xl border italic text-sm text-slate-700 leading-relaxed">
                         {project.problemStatement}
                       </div>
+                      <InlineSectionFeedback
+                        sectionKey="problemStatement"
+                        sectionTitle="2.1 Descripción del Problema"
+                        existingCorrection={project.sectionCorrections?.problemStatement}
+                        onSaveCorrection={handleSaveSingleCorrection}
+                        onRemoveCorrection={handleRemoveSingleCorrection}
+                        isAdvisor={isAdvisor}
+                      />
                     </div>
                     <div className="bg-primary/5 p-6 rounded-xl border-l-4 border-primary">
                       <Label className="text-[9px] font-black uppercase text-primary mb-2 block">2.2 Formulación del Problema (Pregunta)</Label>
                       <p className="text-lg font-bold text-primary leading-tight">"{project.problemFormulation}"</p>
+                      <InlineSectionFeedback
+                        sectionKey="problemFormulation"
+                        sectionTitle="2.2 Formulación del Problema"
+                        existingCorrection={project.sectionCorrections?.problemFormulation}
+                        onSaveCorrection={handleSaveSingleCorrection}
+                        onRemoveCorrection={handleRemoveSingleCorrection}
+                        isAdvisor={isAdvisor}
+                      />
                     </div>
                     <div className="text-sm leading-relaxed text-slate-600 px-2">
                       <Label className="text-[9px] font-black uppercase text-slate-400 mb-2 block">2.3 Justificación</Label>
                       <p className="whitespace-pre-wrap">{project.justification}</p>
+                      <InlineSectionFeedback
+                        sectionKey="justification"
+                        sectionTitle="2.3 Justificación"
+                        existingCorrection={project.sectionCorrections?.justification}
+                        onSaveCorrection={handleSaveSingleCorrection}
+                        onRemoveCorrection={handleRemoveSingleCorrection}
+                        isAdvisor={isAdvisor}
+                      />
                     </div>
                   </CardContent>
                 </Card>
@@ -892,10 +1014,26 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ id: s
                   <Card className="border-none shadow-sm rounded-xl bg-white p-6 space-y-4">
                     <Label className="text-[10px] font-black uppercase text-primary">3.1 Objetivo General</Label>
                     <p className="text-md font-bold text-slate-800 leading-relaxed">{project.generalObjective}</p>
+                    <InlineSectionFeedback
+                      sectionKey="generalObjective"
+                      sectionTitle="3.1 Objetivo General"
+                      existingCorrection={project.sectionCorrections?.generalObjective}
+                      onSaveCorrection={handleSaveSingleCorrection}
+                      onRemoveCorrection={handleRemoveSingleCorrection}
+                      isAdvisor={isAdvisor}
+                    />
                   </Card>
                   <Card className="border-none shadow-sm rounded-xl bg-white p-6 space-y-4">
                     <Label className="text-[10px] font-black uppercase text-accent">3.2 Objetivos Específicos</Label>
                     <div className="text-sm font-medium text-slate-700 whitespace-pre-wrap leading-relaxed">{project.specificObjectives}</div>
+                    <InlineSectionFeedback
+                      sectionKey="specificObjectives"
+                      sectionTitle="3.2 Objetivos Específicos"
+                      existingCorrection={project.sectionCorrections?.specificObjectives}
+                      onSaveCorrection={handleSaveSingleCorrection}
+                      onRemoveCorrection={handleRemoveSingleCorrection}
+                      isAdvisor={isAdvisor}
+                    />
                   </Card>
                 </div>
 
@@ -904,11 +1042,27 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ id: s
                   <Card className="border-none shadow-sm rounded-xl bg-white p-6 space-y-3">
                     <Label className="text-[10px] font-black uppercase text-slate-500 block mb-2">4.1 Diseño Metodológico</Label>
                     <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">{project.methodology}</p>
+                    <InlineSectionFeedback
+                      sectionKey="methodology"
+                      sectionTitle="4.1 Diseño Metodológico"
+                      existingCorrection={project.sectionCorrections?.methodology}
+                      onSaveCorrection={handleSaveSingleCorrection}
+                      onRemoveCorrection={handleRemoveSingleCorrection}
+                      isAdvisor={isAdvisor}
+                    />
                   </Card>
 
                   <Card className="border-none shadow-sm rounded-xl bg-white p-6 space-y-3">
                     <Label className="text-[10px] font-black uppercase text-slate-500 block mb-2">4.2 Resultados Esperados e Impacto</Label>
                     <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">{project.expectedResults}</p>
+                    <InlineSectionFeedback
+                      sectionKey="expectedResults"
+                      sectionTitle="4.2 Resultados e Impacto"
+                      existingCorrection={project.sectionCorrections?.expectedResults}
+                      onSaveCorrection={handleSaveSingleCorrection}
+                      onRemoveCorrection={handleRemoveSingleCorrection}
+                      isAdvisor={isAdvisor}
+                    />
                   </Card>
                 </div>
 
@@ -918,6 +1072,14 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ id: s
                   <div className="text-xs font-mono text-slate-600 whitespace-pre-wrap leading-relaxed">
                     {project.bibliography || "No se han registrado referencias."}
                   </div>
+                  <InlineSectionFeedback
+                    sectionKey="bibliography"
+                    sectionTitle="5. Referencias Bibliográficas"
+                    existingCorrection={project.sectionCorrections?.bibliography}
+                    onSaveCorrection={handleSaveSingleCorrection}
+                    onRemoveCorrection={handleRemoveSingleCorrection}
+                    isAdvisor={isAdvisor}
+                  />
                 </Card>
               </TabsContent>
 
@@ -1611,6 +1773,64 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ id: s
             </Card>
           </div>
         </div>
+        {/* BARRA FLOTANTE DE ACCIONES DE REVISIÓN PARA DOCENTES */}
+        {isAdvisor && project.status !== 'Completado' && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-[92%] max-w-4xl animate-in slide-in-from-bottom-5 duration-300">
+            <div className="bg-slate-900/95 backdrop-blur-md text-white px-5 py-3.5 rounded-2xl shadow-2xl border border-slate-700/80 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className={cn(
+                  "px-3 py-1.5 rounded-xl flex items-center justify-center font-black text-xs",
+                  activeCorrectionsCount > 0 
+                    ? "bg-orange-500/20 text-orange-400 border border-orange-500/30" 
+                    : "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                )}>
+                  {activeCorrectionsCount > 0 ? (
+                    <span className="flex items-center gap-1.5">
+                      <span className="h-2 w-2 rounded-full bg-orange-400 animate-ping" />
+                      {activeCorrectionsCount} {activeCorrectionsCount === 1 ? 'observación' : 'observaciones'}
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1.5">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                      Sin observaciones
+                    </span>
+                  )}
+                </div>
+                <div className="text-xs text-slate-300 hidden md:block">
+                  {activeCorrectionsCount > 0 ? (
+                    <span>Observaciones registradas por planteamiento listas para dictaminar.</span>
+                  ) : (
+                    <span>Escribe observaciones directamente en cada punto o aprueba la propuesta.</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+                {activeCorrectionsCount > 0 && (
+                  <Button
+                    size="sm"
+                    onClick={() => updateStatus('Corregir', project.correcciones, project.sectionCorrections)}
+                    className="rounded-full px-5 py-2 text-xs font-black uppercase tracking-wider bg-orange-600 hover:bg-orange-700 text-white shadow-lg hover:scale-105 transition-all gap-2"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" />
+                    Devolver al Estudiante ({activeCorrectionsCount})
+                  </Button>
+                )}
+                {(project.status === 'Pendiente' || project.status === 'En Revisión' || project.status === 'Corregir') && (
+                  <Button
+                    size="sm"
+                    onClick={() => updateStatus('En Curso')}
+                    className="rounded-full px-5 py-2 text-xs font-black uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg hover:scale-105 transition-all gap-2"
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    Aprobar Propuesta
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         <AdvisorChatFloating projectId={id} projectTitle={project.title} studentId={project.studentId} advisorIds={project.advisorIds || []} />
       </div>
 
