@@ -118,7 +118,7 @@ export default function Home() {
             <p className="font-bold text-sm text-slate-900">ENSUB</p>
             <p className="text-[10px] text-muted-foreground uppercase">Escuela Naval de Suboficiales ARC Barranquilla</p>
           </div>
-          <p className="text-xs text-muted-foreground">© 2024 Escuela Naval de Suboficiales "ARC BARRANQUILLA". Todos los derechos reservados.</p>
+          <p className="text-xs text-muted-foreground">© 2026 Escuela Naval de Suboficiales "ARC BARRANQUILLA". Todos los derechos reservados.</p>
           <div className="flex gap-6">
             <Link href="#" className="text-xs text-muted-foreground hover:text-primary">Ver Normativas</Link>
             <Link href="#" className="text-xs text-muted-foreground hover:text-primary">Términos</Link>

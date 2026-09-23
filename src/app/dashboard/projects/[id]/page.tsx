@@ -1150,7 +1150,7 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ id: s
                      
                      <div className="pt-16 space-y-2">
                         <p className="text-sm font-black uppercase tracking-wider text-slate-800">Barranquilla, Colombia</p>
-                        <p className="text-sm font-bold text-slate-500">{project.deliveryYear}</p>
+                        <p className="text-sm font-bold text-slate-500">{project.deliveryYear || "2026"}</p>
                      </div>
                   </Card>
 
