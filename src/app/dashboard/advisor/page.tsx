@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, query, doc, deleteDoc, updateDoc, addDoc, getDoc } from "firebase/firestore";
+import { collection, query, doc, deleteDoc, updateDoc, addDoc, getDoc, where } from "firebase/firestore";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { StatusBadge } from "@/components/project/status-badge";
@@ -72,13 +72,55 @@ export default function AdvisorDashboard() {
 
   const isSuperUser = ADMIN_WHITELIST.includes(user?.email?.toLowerCase() || "");
 
-  // Consulta general de proyectos
-  const projectsQuery = useMemoFirebase(() => {
+  // Consulta de proyectos enviados/publicados (compatible 100% con las reglas de Firestore)
+  const submittedProjectsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
-    return query(collection(db, "projects"));
+    return query(
+      collection(db, "projects"),
+      where("status", "in", [
+        "Pendiente", 
+        "En Revisión", 
+        "En Curso", 
+        "Corregir", 
+        "Defendido", 
+        "Completado",
+        "Aprobado",
+        "Rechazado"
+      ])
+    );
   }, [db, user]);
 
-  const { data: rawProjects, isLoading } = useCollection<any>(projectsQuery);
+  const { data: submittedProjects, isLoading: isSubmittedLoading } = useCollection<any>(submittedProjectsQuery);
+
+  // Consulta para proyectos asignados al docente
+  const myAssignedQuery = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    return query(
+      collection(db, "projects"),
+      where("advisorIds", "array-contains", user.uid)
+    );
+  }, [db, user]);
+
+  const { data: myAssignedProjects } = useCollection<any>(myAssignedQuery);
+
+  // Consulta para superadministradores
+  const adminAllProjectsQuery = useMemoFirebase(() => {
+    if (!db || !user || !isSuperUser) return null;
+    return query(collection(db, "projects"));
+  }, [db, user, isSuperUser]);
+
+  const { data: adminAllProjects } = useCollection<any>(adminAllProjectsQuery);
+
+  // Fusión unificada y reactiva de proyectos
+  const rawProjects = useMemo(() => {
+    const map = new Map<string, any>();
+    (submittedProjects || []).forEach(p => map.set(p.id, p));
+    (myAssignedProjects || []).forEach(p => map.set(p.id, p));
+    (adminAllProjects || []).forEach(p => map.set(p.id, p));
+    return Array.from(map.values());
+  }, [submittedProjects, myAssignedProjects, adminAllProjects]);
+
+  const isLoading = isSubmittedLoading && (!rawProjects || rawProjects.length === 0);
 
   const handleAssignSelf = async (project: any) => {
     if (!db || !user) return;
