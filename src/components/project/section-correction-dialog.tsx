@@ -381,7 +381,7 @@ function SectionCommentEditor({
           value={comment}
           onChange={(e) => onChange(e.target.value)}
           placeholder={config.placeholder}
-          className="min-h-[85px] text-xs bg-orange-50/30 border-orange-200 focus-visible:ring-orange-500 placeholder:text-slate-400"
+          className="min-h-[85px] text-xs text-slate-900 caret-slate-900 font-semibold bg-orange-50/30 border-orange-300 focus-visible:ring-orange-500 placeholder:text-slate-500"
         />
       </div>
     </div>

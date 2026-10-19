@@ -160,7 +160,7 @@ export function InlineSectionFeedback({
   // Vista cuando el docente decide escribir o editar la corrección
   if (isOpen) {
     return (
-      <div className="mt-3 bg-white border-2 border-orange-400 rounded-xl p-4 space-y-3 shadow-md animate-in fade-in slide-in-from-top-1 duration-200">
+      <div className="mt-3 bg-white text-slate-900 border-2 border-orange-400 rounded-xl p-4 space-y-3 shadow-md animate-in fade-in slide-in-from-top-1 duration-200">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="p-1 bg-orange-100 text-orange-700 rounded-md">
@@ -178,7 +178,7 @@ export function InlineSectionFeedback({
               setCommentText(currentCommentText);
               setIsOpen(false);
             }}
-            className="h-6 w-6 p-0 text-slate-400 hover:text-slate-600 rounded-full"
+            className="h-6 w-6 p-0 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-full"
           >
             <X className="h-4 w-4" />
           </Button>
@@ -188,12 +188,12 @@ export function InlineSectionFeedback({
           value={commentText}
           onChange={(e) => setCommentText(e.target.value)}
           placeholder={`Escribe aquí las observaciones, ajustes o correcciones puntuales que debe realizar el estudiante en la sección "${sectionTitle}"...`}
-          className="min-h-[85px] text-xs bg-orange-50/40 border-orange-200 focus-visible:ring-orange-500 placeholder:text-slate-400 font-medium"
+          className="min-h-[85px] text-xs text-slate-900 caret-slate-900 bg-orange-50/40 border-orange-300 focus-visible:ring-orange-500 placeholder:text-slate-500 font-semibold"
           autoFocus
         />
 
         <div className="flex items-center justify-between pt-1">
-          <span className="text-[10px] text-slate-500 font-medium">
+          <span className="text-[10px] text-slate-600 font-medium">
             💡 Esta nota aparecerá resaltada directamente sobre la casilla del estudiante.
           </span>
           <div className="flex items-center gap-2">
@@ -205,7 +205,7 @@ export function InlineSectionFeedback({
                 setCommentText(currentCommentText);
                 setIsOpen(false);
               }}
-              className="h-8 px-3 text-xs font-bold rounded-lg border-slate-300"
+              className="h-8 px-3 text-xs font-bold text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-100 rounded-lg border-slate-300"
               disabled={isSaving}
             >
               Cancelar

@@ -25,11 +25,11 @@ export const metadata: Metadata = {
   description: 'Plataforma oficial para la trazabilidad, supervisión y éxito de los trabajos de investigación formativa de la Escuela Naval de Suboficiales ARC Barranquilla.',
   keywords: ['ENSUB', 'Escuela Naval', 'Proyectos de Grado', 'Barranquilla', 'Tesis'],
   manifest: '/manifest.json',
-  applicationName: 'ENSUB Proyectos',
+  applicationName: 'Gestión de Proyectos de Grado',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'ENSUB Proyectos',
+    title: 'Gestión de Proyectos de Grado',
   },
   icons: {
     icon: '/icon.svg',

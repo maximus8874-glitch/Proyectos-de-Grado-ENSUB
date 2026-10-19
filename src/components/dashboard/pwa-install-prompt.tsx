@@ -28,23 +28,27 @@ export function PWAInstallPrompt() {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    // 1. Detectar si ya está instalada / abierta como standalone
+    // 1. Detectar si ya está instalada / abierta como standalone o descartada
     const isRunningStandalone = window.matchMedia("(display-mode: standalone)").matches || 
       (window.navigator as any).standalone === true;
+    const isDismissed = sessionStorage.getItem("pwa_prompt_dismissed") === "true";
     
     setIsStandalone(isRunningStandalone);
-    if (isRunningStandalone) return;
+    if (isRunningStandalone || isDismissed) return;
 
-    // 2. Detectar si es iOS (iPhone / iPad)
+    // 2. Detectar si es iOS (iPhone / iPad) o Android móvil
     const userAgent = window.navigator.userAgent.toLowerCase();
     const isIosDevice = /iphone|ipad|ipod/.test(userAgent);
+    const isMobileDevice = /android|iphone|ipad|ipod/.test(userAgent);
     setIsIOS(isIosDevice);
 
     // 3. Capturar evento de instalación en Android / Chrome
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e);
-      setIsVisible(true);
+      if (isMobileDevice && !sessionStorage.getItem("pwa_prompt_dismissed")) {
+        setIsVisible(true);
+      }
     };
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
@@ -65,6 +69,11 @@ export function PWAInstallPrompt() {
       window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
     };
   }, []);
+
+  const handleDismiss = () => {
+    sessionStorage.setItem("pwa_prompt_dismissed", "true");
+    setIsVisible(false);
+  };
 
   const handleInstallClick = async () => {
     if (isIOS) {
@@ -88,7 +97,7 @@ export function PWAInstallPrompt() {
 
   return (
     <>
-      <div className="fixed bottom-20 right-4 z-40 sm:bottom-6 sm:right-6 animate-in slide-in-from-bottom-3 duration-500">
+      <div className="fixed bottom-24 right-4 z-30 animate-in slide-in-from-bottom-3 duration-500">
         <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-700/80 p-3 rounded-2xl shadow-2xl flex items-center gap-3">
           <div className="p-2 bg-primary/30 text-accent rounded-xl">
             <Smartphone className="h-5 w-5" />
@@ -115,7 +124,7 @@ export function PWAInstallPrompt() {
             <Button
               size="icon"
               variant="ghost"
-              onClick={() => setIsVisible(false)}
+              onClick={handleDismiss}
               className="h-7 w-7 text-slate-400 hover:text-white rounded-lg"
             >
               <X className="h-3.5 w-3.5" />
