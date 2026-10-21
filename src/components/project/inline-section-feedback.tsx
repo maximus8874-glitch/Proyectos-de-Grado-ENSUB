@@ -160,13 +160,16 @@ export function InlineSectionFeedback({
   // Vista cuando el docente decide escribir o editar la corrección
   if (isOpen) {
     return (
-      <div className="mt-3 bg-white text-slate-900 border-2 border-orange-400 rounded-xl p-4 space-y-3 shadow-md animate-in fade-in slide-in-from-top-1 duration-200">
+      <div 
+        className="mt-3 bg-white !text-black border-2 border-orange-400 rounded-xl p-4 space-y-3 shadow-md animate-in fade-in slide-in-from-top-1 duration-200"
+        style={{ backgroundColor: "#ffffff", color: "#000000" }}
+      >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="p-1 bg-orange-100 text-orange-700 rounded-md">
               <Edit3 className="h-3.5 w-3.5" />
             </div>
-            <span className="text-xs font-black uppercase tracking-tight text-orange-900">
+            <span className="text-xs font-black uppercase tracking-tight text-orange-900" style={{ color: "#7c2d12" }}>
               Escribir Corrección / Observación para {sectionTitle}
             </span>
           </div>
@@ -178,7 +181,8 @@ export function InlineSectionFeedback({
               setCommentText(currentCommentText);
               setIsOpen(false);
             }}
-            className="h-6 w-6 p-0 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-full"
+            className="h-6 w-6 p-0 text-slate-600 hover:text-black hover:bg-slate-100 rounded-full"
+            style={{ color: "#334155" }}
           >
             <X className="h-4 w-4" />
           </Button>
@@ -188,12 +192,13 @@ export function InlineSectionFeedback({
           value={commentText}
           onChange={(e) => setCommentText(e.target.value)}
           placeholder={`Escribe aquí las observaciones, ajustes o correcciones puntuales que debe realizar el estudiante en la sección "${sectionTitle}"...`}
-          className="min-h-[85px] text-xs text-slate-900 caret-slate-900 bg-orange-50/40 border-orange-300 focus-visible:ring-orange-500 placeholder:text-slate-500 font-semibold"
+          className="min-h-[95px] text-sm !text-black caret-black bg-orange-50/50 border-orange-300 focus-visible:ring-orange-500 placeholder:text-slate-500 font-semibold"
+          style={{ color: "#000000", caretColor: "#000000", backgroundColor: "#fffaf5", WebkitTextFillColor: "#000000" }}
           autoFocus
         />
 
         <div className="flex items-center justify-between pt-1">
-          <span className="text-[10px] text-slate-600 font-medium">
+          <span className="text-[10px] text-slate-700 font-semibold" style={{ color: "#334155" }}>
             💡 Esta nota aparecerá resaltada directamente sobre la casilla del estudiante.
           </span>
           <div className="flex items-center gap-2">
@@ -205,7 +210,8 @@ export function InlineSectionFeedback({
                 setCommentText(currentCommentText);
                 setIsOpen(false);
               }}
-              className="h-8 px-3 text-xs font-bold text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-100 rounded-lg border-slate-300"
+              className="h-8 px-3 text-xs font-bold !text-slate-900 hover:!text-black bg-white hover:bg-slate-100 rounded-lg border-slate-300"
+              style={{ color: "#0f172a", backgroundColor: "#ffffff" }}
               disabled={isSaving}
             >
               Cancelar
